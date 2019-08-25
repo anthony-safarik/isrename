@@ -5,23 +5,45 @@ import argparse
 parser = argparse.ArgumentParser(description='This script renames image sequences')
 parser.add_argument('-i','--inpath', help='folder path containing an image sequence',required=True)
 parser.add_argument('-e','--ext', help='file extension to operate on',required=True)
-parser.add_argument('-t','--target', help='target is the new name for the sequence',required=True)
+parser.add_argument('-t','--target', help='target is the new name for the sequence',required=False)
 parser.add_argument('-s','--start', help='start frame number',required=False)
 parser.add_argument('-d','--delimiter', help='frame number delimiter',required=False)
 
 args = parser.parse_args()
 
+#set the required variables
 inpath = args.inpath
-start = args.start
 ext = args.ext
-target = args.target
 
+#test validity of inpath
+try:
+    print(inpath)
+    assert os.path.isdir(inpath), "inpath is not a valid directory"
+except AssertionError as e:
+    print(e)
+    quit()
+
+#set unrequired variables to defaults
+if not args.start:
+    start = '00001'
+else:
+    start = args.start
+    for i in start:
+        if not i.isdigit():
+            print (start,'contains non-digits... setting the start frame to 00001')
+            start = '00001'
+            break
+
+if not args.target:
+    print ('no name provided, defaulting to parent folder name')
+    target = os.path.basename(inpath)
+
+# "." is the default delimiter if user doesn't provide one
 if type(args.delimiter) is str:
     frame_number_delimiter = args.delimiter
 else:
     frame_number_delimiter = '.'
 
-# "." is the default delimiter if user doesn't provide one
 if not ext.startswith('.'):
     ext = '.'+ext
 
