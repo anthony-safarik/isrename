@@ -1,70 +1,74 @@
-#!/usr/bin/env python
 import os
-import argparse
 
-parser = argparse.ArgumentParser(description='This script renames image sequences')
-parser.add_argument('-i','--inpath', help='folder path containing an image sequence',required=True)
-parser.add_argument('-e','--ext', help='file extension to operate on',required=True)
-parser.add_argument('-t','--target', help='target is the new name for the sequence',required=False)
-parser.add_argument('-s','--start', help='start frame number',required=False)
-parser.add_argument('-d','--delimiter', help='frame number delimiter',required=False)
+def get_new_sequence(files,rename,pad,start=1):
+    '''
+    input:
+        files is a list of full file paths to rename
+        pad is the number of digits to pad the new sequence
+        start is the first frame of new sequence
+    returns a list. each element is another list containing [file dir, old name, new name, True/False if renamed]
+    '''
+    count = start
+    renamed_files = []
+    for item in files:
+        dir, fname = os.path.split(item)
+        base, ext = os.path.splitext(fname)
+        renamed = rename+str(count).zfill(pad)+ext
+        rename_full_path = (os.path.join(dir,renamed))
+        renamed_files.append([dir,fname,renamed,False])
+        count +=1
+    return renamed_files
 
-args = parser.parse_args()
+def get_dir_endswith(dir,ext):
+    '''
+    input:
+        dir: directory containing files or folders
+        ext: ending part of a folder or file, such as extension
+    returns:
+        sorted list of files that end with ext
+    '''
+    files = []
+    for file in os.listdir(dir):
+        if file.endswith(ext):
+            files.append(os.path.join(dir,file))
+    files = sorted(files)
+    return files
 
-#set the required variables
-inpath = args.inpath
-ext = args.ext
 
-#test validity of inpath
-try:
-    print(inpath)
-    assert os.path.isdir(inpath), "inpath is not a valid directory"
-except AssertionError as e:
-    print(e)
-    quit()
+def rename_files_and_folders(sequence_to_rename):
+    '''
+     sequence_to_rename is a list. Each element is another list containing [file dir, old name, new name, True/False if renamed]
+     returns nothing, but modifies the sequence_to_rename
+    '''
+    for i in sequence_to_rename:
+        current_name = os.path.join(i[0],i[1])
+        new_name = os.path.join(i[0],i[2])
+        if not os.path.exists(new_name):
+            os.rename(current_name, new_name)
+            if os.path.exists(new_name):
+                i[3] = True
+    print ("naming finished")
 
-#set unrequired variables to defaults
-if not args.start:
-    start = '00001'
+
+def check_rename_successful(sequence_to_rename):
+    '''
+    input is a sequence_to_rename [str "directory",str "Origial Name",str "New Name",True/False if successful]
+    '''
+    for i in sequence_to_rename:
+        if i[3] == False:
+            return False
+    return True
+
+user_folder = input("directory: ")
+user_input_ext = input("file extension: ")
+user_input_name = input("target name: ")
+user_input_pad = input("padding")
+
+
+files = get_dir_endswith(user_folder,user_input_ext)
+sequence_to_rename = get_new_sequence(files,user_input_name,int(user_input_pad))
+rename_files_and_folders(sequence_to_rename)
+if check_rename_successful(sequence_to_rename):
+    print ("rename successfull")
 else:
-    start = args.start
-    for i in start:
-        if not i.isdigit():
-            print (start,'contains non-digits... setting the start frame to 00001')
-            start = '00001'
-            break
-
-if not args.target:
-    print ('no name provided, defaulting to parent folder name')
-    target = os.path.basename(inpath)
-
-# "." is the default delimiter if user doesn't provide one
-if type(args.delimiter) is str:
-    frame_number_delimiter = args.delimiter
-else:
-    frame_number_delimiter = '.'
-
-if not ext.startswith('.'):
-    ext = '.'+ext
-
-print ('inpath='+inpath,'ext='+ext,'start='+start)
-
-def rename_sequence(inpath,ext,start_frame,target_name,frame_number_delimiter):
-    '''inpath is a folder of files of extension "ext" to be renamed to target_name.
-    start_frame is a string containing digits only, padded with zeroes to match desired target_name frame number padding'''
-
-    padding = len(start_frame)
-    frame_count = int(start_frame) - 1
-
-    for fname in sorted(os.listdir(inpath)):
-
-        fname_base, fname_ext = os.path.splitext(fname)
-
-        if ext == fname_ext:
-            frame_count+=1
-            target_frame_number = str(frame_count).zfill(padding)
-            target_name_full = target_name + frame_number_delimiter + target_frame_number + ext
-            print (fname_base,'>',target_name_full)
-
-
-rename_sequence(inpath,ext,start,target,frame_number_delimiter)
+    print ("some files were not able to be renamed")
